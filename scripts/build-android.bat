@@ -3,6 +3,8 @@ setlocal enabledelayedexpansion
 
 SET LIB_NAME=imgui
 
+SET BUILD_DEBUG=%BUILD_DEBUG%
+
 echo COMPILING PC...
 SET PROJECT_DIR=%~dp0..
 
@@ -55,10 +57,12 @@ if not exist %BUILD_DIR% (
 )
 
 echo Cleaning up...
-    if exist %OUTPUT_LIBS_DEBUG% (
-        rmdir /s /q %OUTPUT_LIBS_DEBUG%
+    if [%BUILD_DEBUG%]==[1] (
+        if exist %OUTPUT_LIBS_DEBUG% (
+            rmdir /s /q %OUTPUT_LIBS_DEBUG%
+        )
+        mkdir %OUTPUT_LIBS_DEBUG%
     )
-    mkdir %OUTPUT_LIBS_DEBUG%
 
     if exist %OUTPUT_LIBS_RELEASE% (
         rmdir /s /q %OUTPUT_LIBS_RELEASE%
@@ -67,19 +71,21 @@ echo Cleaning up...
 
 cd %PROJECT_DIR%
 echo Compiling armeabi-v7a...
-    if not exist %BUILD_DIR%\armeabi-v7a\Debug (
-        mkdir %BUILD_DIR%\armeabi-v7a\Debug
-    )
-    cd %BUILD_DIR%\armeabi-v7a\Debug
-    echo Generating armeabi-v7a Debug CMAKE project ...
-    cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
-    if %ERRORLEVEL% NEQ 0 goto ERROR
+    if [%BUILD_DEBUG%]==[1] (
+        if not exist %BUILD_DIR%\armeabi-v7a\Debug (
+            mkdir %BUILD_DIR%\armeabi-v7a\Debug
+        )
+        cd %BUILD_DIR%\armeabi-v7a\Debug
+        echo Generating armeabi-v7a Debug CMAKE project ...
+        cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
+        if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling armeabi-v7a - Debug...
-    cmake --build .
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\armeabi-v7a\
-    xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\armeabi-v7a\
+        echo Compiling armeabi-v7a - Debug...
+        cmake --build .
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\armeabi-v7a\
+        xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\armeabi-v7a\
+    )
 
     if not exist %BUILD_DIR%\armeabi-v7a\Release (
         mkdir %BUILD_DIR%\armeabi-v7a\Release
@@ -97,19 +103,21 @@ echo Compiling armeabi-v7a DONE
 
 cd %PROJECT_DIR%
 echo Compiling arm64-v8a...
-    if not exist %BUILD_DIR%\arm64-v8a\Debug (
-        mkdir %BUILD_DIR%\arm64-v8a\Debug
-    )
-    cd %BUILD_DIR%\arm64-v8a\Debug
-    echo Generating arm64-v8a Debug CMAKE project ...
-    cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-21 -DANDROID_ARM_MODE=arm -DANDROID_ARM_NEON=TRUE -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
-    if %ERRORLEVEL% NEQ 0 goto ERROR
+    if [%BUILD_DEBUG%]==[1] (
+        if not exist %BUILD_DIR%\arm64-v8a\Debug (
+            mkdir %BUILD_DIR%\arm64-v8a\Debug
+        )
+        cd %BUILD_DIR%\arm64-v8a\Debug
+        echo Generating arm64-v8a Debug CMAKE project ...
+        cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-21 -DANDROID_ARM_MODE=arm -DANDROID_ARM_NEON=TRUE -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
+        if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling arm64-v8a - Debug...
-    cmake --build .
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\arm64-v8a\
-    xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\arm64-v8a\
+        echo Compiling arm64-v8a - Debug...
+        cmake --build .
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\arm64-v8a\
+        xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\arm64-v8a\
+    )
 
     if not exist %BUILD_DIR%\arm64-v8a\Release (
         mkdir %BUILD_DIR%\arm64-v8a\Release
@@ -127,19 +135,21 @@ echo Compiling arm64-v8a DONE
 
 cd %PROJECT_DIR%
 echo Compiling x86...
-    if not exist %BUILD_DIR%\x86\Debug (
-        mkdir %BUILD_DIR%\x86\Debug
-    )
-    cd %BUILD_DIR%\x86\Debug
-    echo Generating x86 Debug CMAKE project ...
-    cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=x86 -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
-    if %ERRORLEVEL% NEQ 0 goto ERROR
+    if [%BUILD_DEBUG%]==[1] (
+        if not exist %BUILD_DIR%\x86\Debug (
+            mkdir %BUILD_DIR%\x86\Debug
+        )
+        cd %BUILD_DIR%\x86\Debug
+        echo Generating x86 Debug CMAKE project ...
+        cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=x86 -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
+        if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling x86 - Debug...
-    cmake --build .
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\x86\
-    xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\x86\
+        echo Compiling x86 - Debug...
+        cmake --build .
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\x86\
+        xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\x86\
+    )
 
     if not exist %BUILD_DIR%\x86\Release (
         mkdir %BUILD_DIR%\x86\Release
@@ -157,19 +167,21 @@ echo Compiling x86 DONE
 
 cd %PROJECT_DIR%
 echo Compiling x86_64...
-    if not exist %BUILD_DIR%\x86_64\Debug (
-        mkdir %BUILD_DIR%\x86_64\Debug
-    )
-    cd %BUILD_DIR%\x86_64\Debug
-    echo Generating x86_64 Debug CMAKE project ...
-    cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
-    if %ERRORLEVEL% NEQ 0 goto ERROR
+    if [%BUILD_DEBUG%]==[1] (
+        if not exist %BUILD_DIR%\x86_64\Debug (
+            mkdir %BUILD_DIR%\x86_64\Debug
+        )
+        cd %BUILD_DIR%\x86_64\Debug
+        echo Generating x86_64 Debug CMAKE project ...
+        cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=!ANDROID_TOOLCHAIN! -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Debug %PROJECT_DIR%
+        if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling x86_64 - Debug...
-    cmake --build .
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\x86_64\
-    xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\x86_64\
+        echo Compiling x86_64 - Debug...
+        cmake --build .
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /y *.a %OUTPUT_LIBS_DEBUG%\x86_64\
+        xcopy /q /y *.so %OUTPUT_LIBS_DEBUG%\x86_64\
+    )
 
     if not exist %BUILD_DIR%\x86_64\Release (
         mkdir %BUILD_DIR%\x86_64\Release
@@ -188,8 +200,8 @@ echo Compiling x86_64 DONE
 goto ALL_DONE
 
 :ERROR
-	echo ERROR OCCURED DURING COMPILING
+    echo ERROR OCCURED DURING COMPILING
 
 :ALL_DONE
-	cd %PROJECT_DIR%
-	echo COMPILING DONE!
+    cd %PROJECT_DIR%
+    echo COMPILING DONE!

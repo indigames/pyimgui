@@ -2,6 +2,9 @@
 
 SET LIB_NAME=imgui
 
+SET BUILD_DEBUG=%BUILD_DEBUG%
+SET BUILD_X86=%BUILD_X86%
+
 echo COMPILING PC...
 SET PROJECT_DIR=%~dp0..
 
@@ -25,10 +28,12 @@ echo Cleaning up...
     )
     mkdir %OUTPUT_HEADER%
 
-    if exist %OUTPUT_LIBS_DEBUG% (
-        rmdir /s /q %OUTPUT_LIBS_DEBUG%
+    if [%BUILD_DEBUG%]==[1] (
+        if exist %OUTPUT_LIBS_DEBUG% (
+            rmdir /s /q %OUTPUT_LIBS_DEBUG%
+        )
+        mkdir %OUTPUT_LIBS_DEBUG%
     )
-    mkdir %OUTPUT_LIBS_DEBUG%
 
     if exist %OUTPUT_LIBS_RELEASE% (
         rmdir /s /q %OUTPUT_LIBS_RELEASE%
@@ -41,7 +46,8 @@ echo Fetching include headers...
     xcopy /q /s /y %~dp0..\config-cpp\*.h?? %OUTPUT_HEADER%\config-cpp\
 
 cd %PROJECT_DIR%
-echo Compiling x86...
+if [%BUILD_X86%]==[1] (
+    echo Compiling x86...
     if not exist %BUILD_DIR%\x86 (
         mkdir %BUILD_DIR%\x86
     )
@@ -50,11 +56,13 @@ echo Compiling x86...
     cmake %PROJECT_DIR% -A Win32
     if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling x86 - Debug...
-    cmake --build . --config Debug -- -m
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /s /y Debug\*.lib %OUTPUT_LIBS_DEBUG%\x86\
-    xcopy /q /s /y Debug\*.dll %OUTPUT_LIBS_DEBUG%\x86\
+    if [%BUILD_DEBUG%]==[1] (
+        echo Compiling x86 - Debug...
+        cmake --build . --config Debug -- -m
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /s /y Debug\*.lib %OUTPUT_LIBS_DEBUG%\x86\
+        xcopy /q /s /y Debug\*.dll %OUTPUT_LIBS_DEBUG%\x86\
+    )
 
     echo Compiling x86 - Release...
     cmake --build . --config Release -- -m
@@ -62,7 +70,8 @@ echo Compiling x86...
     xcopy /q /s /y Release\*.lib %OUTPUT_LIBS_RELEASE%\x86\
     xcopy /q /s /y Release\*.dll %OUTPUT_LIBS_RELEASE%\x86\
 
-echo Compiling x86 DONE
+    echo Compiling x86 DONE
+)
 
 cd %PROJECT_DIR%
 echo Compiling x64...
@@ -74,11 +83,13 @@ echo Compiling x64...
     cmake %PROJECT_DIR% -A x64
     if %ERRORLEVEL% NEQ 0 goto ERROR
 
-    echo Compiling x64 - Debug...
-    cmake --build . --config Debug -- -m
-    if %ERRORLEVEL% NEQ 0 goto ERROR
-    xcopy /q /s /y Debug\*.lib %OUTPUT_LIBS_DEBUG%\x64\
-    xcopy /q /s /y Debug\*.dll %OUTPUT_LIBS_DEBUG%\x64\
+    if [%BUILD_DEBUG%]==[1] (
+        echo Compiling x64 - Debug...
+        cmake --build . --config Debug -- -m
+        if %ERRORLEVEL% NEQ 0 goto ERROR
+        xcopy /q /s /y Debug\*.lib %OUTPUT_LIBS_DEBUG%\x64\
+        xcopy /q /s /y Debug\*.dll %OUTPUT_LIBS_DEBUG%\x64\
+    )
 
     echo Compiling x64 - Release...
     cmake --build . --config Release -- -m
