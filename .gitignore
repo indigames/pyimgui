@@ -118,3 +118,5 @@ ENV/
 # Fonts
 *.ttf
 *.otf
+
+/igeLibs
