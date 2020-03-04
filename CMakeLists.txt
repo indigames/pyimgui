@@ -18,10 +18,10 @@ if(DEFINED ANDROID_PLATFORM)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_compile_options(-Ofast)
     else(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options(-Os)
+        add_compile_options(-Og)
     endif()
 elseif(MSVC)
-  add_compile_options(/MP)
+    add_compile_options(/MP)
 endif()
 # [/IGE]
 
