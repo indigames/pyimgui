@@ -25,24 +25,30 @@ elseif(MSVC)
 endif()
 # [/IGE]
 
-set (PYTHON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/igeLibs/Python/Include")
+# [IGE]: define python path
+if (NOT DEFINED IGE_ROOT)
+    set(IGE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
+set (PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Include")
 if (MSVC)
-    list(APPEND PYTHON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/igeLibs/Python/PC")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/PC")
 elseif (OSX)
-    list(APPEND PYTHON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/igeLibs/Python/Mac")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Mac")
 elseif (ANDROID)
-    list(APPEND PYTHON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/igeLibs/Python/Android")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Android")
 elseif (IOS)
-    list(APPEND PYTHON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/igeLibs/Python/IOS")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/IOS")
 endif ()
+# [/IGE]
 
 add_library(${TARGET_NAME} STATIC 
-    config-cpp/py_imconfig.cpp
-    imgui/core.cpp
-    imgui-cpp/imgui.cpp
-    imgui-cpp/imgui_demo.cpp
-    imgui-cpp/imgui_draw.cpp
-    imgui-cpp/imgui_widgets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/config-cpp/py_imconfig.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/core.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui-cpp/imgui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui-cpp/imgui_demo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui-cpp/imgui_draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui-cpp/imgui_widgets.cpp
 )
 
 target_include_directories(${TARGET_NAME} PRIVATE 
