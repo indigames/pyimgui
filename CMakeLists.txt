@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+file(TO_CMAKE_PATH $ENV{IGE_LIBS} IGE_LIBS)
+
 set(TARGET_NAME imgui_python)
 project(${TARGET_NAME})
 
@@ -16,7 +18,7 @@ if(DEFINED ANDROID_PLATFORM)
         add_compile_options(-march=atom -m64 -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mfpmath=sse)
     endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(-Ofast)
+        add_compile_options(-g0 -Ofast)
     else(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options(-Og)
     endif()
@@ -26,19 +28,15 @@ endif()
 # [/IGE]
 
 # [IGE]: define python path
-if (NOT DEFINED IGE_ROOT)
-    set(IGE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
-
-set (PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Include")
+set (PYTHON_INCLUDE_DIRS "${IGE_LIBS}/Python/Include")
 if (MSVC)
-    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/PC")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_LIBS}/Python/PC")
 elseif (OSX)
-    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Mac")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_LIBS}/Python/Mac")
 elseif (ANDROID)
-    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/Android")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_LIBS}/Python/Android")
 elseif (IOS)
-    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_ROOT}/igeLibs/Python/IOS")
+    list(APPEND PYTHON_INCLUDE_DIRS "${IGE_LIBS}/Python/IOS")
 endif ()
 # [/IGE]
 
