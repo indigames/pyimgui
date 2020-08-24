@@ -1434,10 +1434,14 @@ cdef class _IO(object):
 
     cdef cimgui.ImGuiIO* _ptr
     cdef object _fonts
+    cdef object _get_clipboard_text_fn
+    cdef object _set_clipboard_text_fn
 
     def __init__(self):
         self._ptr = &cimgui.GetIO()
         self._fonts = _FontAtlas.from_ptr(self._ptr.Fonts)
+        self._get_clipboard_text_fn = None
+        self._set_clipboard_text_fn = None
 
     # ... maping of input properties ...
     @property
@@ -1447,11 +1451,11 @@ cdef class _IO(object):
     @config_flags.setter
     def config_flags(self, cimgui.ImGuiConfigFlags value):
         self._ptr.ConfigFlags = value
-    
+
     @property
     def backend_flags(self):
         return self._ptr.BackendFlags
-    
+
     @backend_flags.setter
     def backend_flags(self, cimgui.ImGuiBackendFlags value):
         self._ptr.BackendFlags = value
@@ -1487,6 +1491,14 @@ cdef class _IO(object):
     @log_file_name.setter
     def log_file_name(self, char* value):
         self._ptr.LogFilename = value
+
+    @property
+    def ini_file_name(self):
+        return self._ptr.IniFilename
+
+    @ini_file_name.setter
+    def ini_file_name(self, char* value):
+        self._ptr.IniFilename = value
 
     @property
     def mouse_double_click_time(self):
@@ -1607,6 +1619,41 @@ cdef class _IO(object):
     def config_resize_windows_from_edges(self, cimgui.bool value):
         self._ptr.ConfigResizeWindowsFromEdges = value
 
+    @staticmethod
+    cdef const char* _get_clipboard_text(void* user_data):
+        text = _io.get_clipboard_text_fn()
+        if type(text) is bytes:
+            return text
+        return _bytes(text)
+
+    @property
+    def get_clipboard_text_fn(self):
+        return self._get_clipboard_text_fn
+
+    @get_clipboard_text_fn.setter
+    def get_clipboard_text_fn(self, func):
+        if callable(func):
+            self._get_clipboard_text_fn = func
+            self._ptr.GetClipboardTextFn = self._get_clipboard_text
+        else:
+            raise ValueError("func is not a callable: %s" % str(func))
+
+    @staticmethod
+    cdef void _set_clipboard_text(void* user_data, const char* text):
+        _io.set_clipboard_text_fn(_from_bytes(text))
+
+    @property
+    def set_clipboard_text_fn(self):
+        return self._set_clipboard_text_fn
+
+    @set_clipboard_text_fn.setter
+    def set_clipboard_text_fn(self, func):
+        if callable(func):
+            self._set_clipboard_text_fn = func
+            self._ptr.SetClipboardTextFn = self._set_clipboard_text
+        else:
+            raise ValueError("func is not a callable: %s" % str(func))
+
     @property
     def mouse_pos(self):
         return _cast_ImVec2_tuple(self._ptr.MousePos)
@@ -1635,6 +1682,14 @@ cdef class _IO(object):
     @mouse_wheel.setter
     def mouse_wheel(self, float value):
         self._ptr.MouseWheel = value
+
+    @property
+    def mouse_wheel_horizontal(self):
+        return self._ptr.MouseWheelH
+
+    @mouse_wheel_horizontal.setter
+    def mouse_wheel_horizontal(self, float value):
+        self._ptr.MouseWheelH = value
 
     @property
     def mouse_draw_cursor(self):
@@ -1692,6 +1747,12 @@ cdef class _IO(object):
     def add_input_character(self, cimgui.ImWchar c):
         self._ptr.AddInputCharacter(c)
 
+    def add_input_characters_utf8(self, str utf8_chars):
+        self._ptr.AddInputCharactersUTF8(_bytes(utf8_chars))
+
+    def clear_input_characters(self):
+        self._ptr.ClearInputCharacters()
+
     # ... mapping of output properties ...
     @property
     def want_capture_mouse(self):
@@ -1733,6 +1794,9 @@ cdef class _IO(object):
     def metrics_active_windows(self):
         return self._ptr.MetricsActiveWindows
 
+    @property
+    def mouse_delta(self):
+        return _cast_ImVec2_tuple(self._ptr.MouseDelta)
 
 _io = None
 def get_io():
@@ -2181,10 +2245,54 @@ def get_window_content_region_width():
 def set_window_focus():
     """Set window to be focused
 
+    Call inside :func:`begin()`.
+
+    .. visual-example::
+        :title: Window focus
+        :height: 100
+
+        imgui.begin("Window 1")
+        imgui.end()
+
+        imgui.begin("Window 2")
+        imgui.set_window_focus()
+        imgui.end()
+
     .. wraps::
         void SetWindowFocus()
     """
     cimgui.SetWindowFocus()
+
+def set_window_focus_labeled(str label):
+    """Set focus to the window named label
+
+    Args:
+        label(string): the name of the window that will be focused
+
+    .. visual-example::
+        :title: Window focus
+        :height: 100
+
+        imgui.set_window_focus_labeled("Window 2")
+
+        imgui.begin("Window 1", True)
+        imgui.text("Apples")
+        imgui.end()
+
+        imgui.begin("Window 2", True)
+        imgui.text("Orange")
+        imgui.end()
+
+        imgui.begin("Window 3", True)
+        imgui.text("Mango")
+        imgui.end()
+
+    .. wraps::
+        void SetWindowFocus(
+            const char* name
+        )
+    """
+    cimgui.SetWindowFocus(_bytes(label))
 
 def set_window_size(
     float width, float height, cimgui.ImGuiCond condition=ONCE):
@@ -2217,6 +2325,42 @@ def set_window_size(
         )
     """
     cimgui.SetWindowSize(_cast_args_ImVec2(width, height), condition)
+
+def set_window_size_named(str label, float width, float height, cimgui.ImGuiCond condition = ONCE):
+    """Set the window with label to some size
+
+    Args:
+        label(string): name of the window
+        width(float): new width of the window
+        height(float): new height of the window
+        condition (:ref:`condition flag <condition-options>`): defines on which
+            condition value should be set. Defaults to :any:`imgui.ONCE`.
+
+    .. visual-example::
+        :title: Window size
+        :height: 200
+
+        imgui.set_window_size_named("Window 1",100,100)
+        imgui.set_window_size_named("Window 2",100,200)
+
+        imgui.begin("Window 1")
+        imgui.end()
+
+        imgui.begin("Window 2")
+        imgui.end()
+
+    .. wraps::
+        void SetWindowSize(
+            const char* name,
+            const ImVec2& size,
+             ImGuiCond cond
+    )
+    """
+    cimgui.SetWindowSize(
+        _bytes(label),
+        _cast_args_ImVec2(width, height),
+        condition
+    )
 
 def get_scroll_x():
     """get scrolling amount [0..GetScrollMaxX()]
@@ -2528,6 +2672,153 @@ def set_next_window_size(
         )
     """
     cimgui.SetNextWindowSize(_cast_args_ImVec2(width, height), condition)
+
+def set_next_window_content_size(float width, float height):
+    """Set content size of the next window. Show scrollbars
+       if content doesn't fit in the window
+
+    Call before :func:`begin()`.
+
+    Args:
+        width(float): width of the content area
+        height(float): height of the content area
+
+    .. visual-example::
+        :title: Content Size Demo
+        :height: 30
+
+        imgui.set_window_size(20,20)
+        imgui.set_next_window_content_size(100,100)
+
+        imgui.begin("Window", True)
+        imgui.text("Some example text")
+        imgui.end()
+
+    .. wraps::
+        void SetNextWindowContentSize(
+            const ImVec2& size
+        )
+    """
+    cimgui.SetNextWindowContentSize(_cast_args_ImVec2(width, height))
+
+def set_window_position(float x, float y, cimgui.ImGuiCond condition = ALWAYS):
+    """Set the size of the current window
+
+    Call inside: func: 'begin()'
+
+    Args:
+        x(float): position on the x axis
+        y(float): position on the y axis
+        condition (:ref:`condition flag <condition-options>`): defines on which
+            condition value should be set. Defaults to :any:`imgui.ALWAYS`.
+
+    .. visual-example::
+        :title: Window Size Demo
+        :height: 200
+
+        imgui.begin("Window 1")
+        imgui.set_window_position(20,20)
+        imgui.end()
+
+        imgui.begin("Window 2")
+        imgui.set_window_position(20,50)
+        imgui.end()
+
+    .. wraps::
+        void SetWindowPos(
+            const ImVec2& pos,
+            ImGuiCond cond
+        )
+    """
+    cimgui.SetWindowPos(_cast_args_ImVec2(x,y), condition)
+
+def set_window_position_labeled(str label, float x, float y, cimgui.ImGuiCond condition = ALWAYS):
+    """Set the size of the window with label
+
+    Args:
+        label(str): name of the window to be resized
+        x(float): position on the x axis
+        y(float): position on the y axis
+        condition (:ref:`condition flag <condition-options>`): defines on which
+            condition value should be set. Defaults to :any:`imgui.ALWAYS`.
+
+    .. visual-example::
+        :title: Window Size Demo
+        :height: 200
+
+        imgui.set_window_position_labeled("Window 1", 20, 50)
+        imgui.set_window_position_labeled("Window 2", 20, 100)
+
+        imgui.begin("Window 1")
+        imgui.end()
+
+        imgui.begin("Window 2")
+        imgui.end()
+
+    .. wraps::
+        void SetWindowPos(
+            const char* name,
+            const ImVec2& pos,
+            ImGuiCond cond
+    )
+    """
+    cimgui.SetWindowPos(
+        _bytes(label),
+        _cast_args_ImVec2(x,y),
+        condition
+    )
+
+def set_window_collapsed(bool collapsed, cimgui.ImGuiCond condition = ALWAYS):
+    """Set the current window to be collapsed
+
+    Call inside: func: 'begin()'
+
+    Args:
+        collapsed(bool): set boolean for collapsing the window. Set True for closed
+        condition (:ref:`condition flag <condition-options>`): defines on which
+            condition value should be set. Defaults to :any:`imgui.ALWAYS`.
+
+    .. visual-example::
+        :title: Window Collapsed Demo
+        :height: 200
+
+        imgui.begin("Window 1")
+        imgui.set_window_collapsed(True)
+        imgui.end()
+
+    .. wraps::
+        void SetWindowCollapsed(
+            bool collapsed,
+            ImGuiCond cond
+        )
+    """
+    cimgui.SetWindowCollapsed(collapsed, condition)
+
+def set_window_collapsed_labeled(str label, bool collapsed, cimgui.ImGuiCond condition = ALWAYS):
+    """Set window with label to collapse
+
+    Args:
+        label(string): name of the window
+        collapsed(bool): set boolean for collapsing the window. Set True for closed
+        condition (:ref:`condition flag <condition-options>`): defines on which
+            condition value should be set. Defaults to :any:`imgui.ALWAYS`.
+
+    .. visual-example::
+        :title: Window Collapsed Demo
+        :height: 200
+
+        imgui.set_window_collapsed_labeled("Window 1", True)
+        imgui.begin("Window 1")
+        imgui.end()
+
+    .. wraps::
+        void SetWindowCollapsed(
+            const char* name,
+            bool collapsed,
+            ImGuiCond cond
+        )
+    """
+    cimgui.SetWindowCollapsed(_bytes(label), collapsed, condition)
 
 
 def is_window_collapsed():
@@ -3403,6 +3694,50 @@ def text_colored(str text, float r, float g, float b, float a=1.):
     # note: "%s" required for safety and to favor of Python string formating
     cimgui.TextColored(_cast_args_ImVec4(r, g, b, a), "%s", _bytes(text))
 
+def text_disabled(str text):
+    """Add disabled(grayed out) text to current widget stack.
+
+    .. visual-example::
+        :title: disabled text widget
+        :height: 80
+        :auto_layout:
+
+        imgui.begin("Example: disabled text")
+        imgui.text_disabled("Disabled text")
+        imgui.end()
+
+    Args:
+        text (str): text to display.
+
+    .. wraps::
+        TextDisabled(const char*, ...)
+    """
+    # note: "%s" required for safety and to favor of Python string formating
+    cimgui.TextDisabled("%s", _bytes(text))
+
+def text_wrapped(str text):
+    """Add wrappable text to current widget stack.
+
+    .. visual-example::
+        :title: Wrappable Text
+        :height: 80
+        :width: 40
+        :auto_layout:
+
+        imgui.begin("Text wrap")
+        # Resize the window to see text wrapping
+        imgui.text_wrapped("This text will wrap around.")
+        imgui.end()
+
+    Args:
+        text (str): text to display
+
+    .. wraps::
+        TextWrapped(const char* fmt, ...)
+    """
+    # note: "%s" required for safety and to favor of Python string formating
+    cimgui.TextWrapped("%s", _bytes(text))
+
 
 def label_text(str label, str text):
     """Display text+label aligned the same way as value+label widgets.
@@ -3552,6 +3887,30 @@ def small_button(str label):
     """
     return cimgui.SmallButton(_bytes(label))
 
+def arrow_button(str label, cimgui.ImGuiDir direction = DIRECTION_NONE):
+    """Display an arrow button
+
+    .. visual-example::
+        :auto_layout:
+        :height: 100
+
+        imgui.begin("Arrow button")
+        imgui.arrow_button("Button", imgui.DIRECTION_LEFT)
+        imgui.end()
+
+    Args:
+        label (str): button label.
+        direction = imgui direction constant
+
+    Returns:
+        bool: True if clicked.
+
+    .. wraps::
+        bool ArrowButton(const char*, ImGuiDir)
+    """
+    if direction == DIRECTION_NONE:
+        raise ValueError("Direction wasn't specified.")
+    return cimgui.ArrowButton(_bytes(label), direction)
 
 def invisible_button(str identifier, width, height):
     """Create invisible button.
@@ -5768,6 +6127,33 @@ def plot_histogram(
         stride
     )
 
+def progress_bar(float fraction, size = (0,0), str overlay = ""):
+    """ Show a progress bar
+
+    .. visual-example::
+        :auto_layout:
+        :width: 400
+        :height: 200
+
+        imgui.begin("Progress bar example")
+        imgui.progress_bar(0.7, (100,20), "Overlay text")
+        imgui.end()
+
+    Args:
+        fraction (float): A floating point number between 0.0 and 1.0
+            0.0 means no progress and 1.0 means progress is completed
+        size : a tuple (width, height) that sets the width and height
+            of the progress bar
+        overlay (str): Optional text that will be shown in the progress bar
+
+    .. wraps::
+            void ProgressBar(
+            float fraction,
+            const ImVec2& size_arg, const char* overlay
+    )
+
+    """
+    cimgui.ProgressBar(fraction, _cast_tuple_ImVec2(size), _bytes(overlay))
 
 def set_item_default_focus():
     """Make last item the default focused item of a window.
@@ -6385,7 +6771,11 @@ cpdef get_font_size():
     """
     return cimgui.GetFontSize()
 
+cpdef get_style_color_vec_4(cimgui.ImGuiCol idx):
+    return _cast_ImVec4_tuple(cimgui.GetStyleColorVec4(idx))
 
+cpdef get_font_tex_uv_white_pixel():
+    return _cast_ImVec2_tuple(cimgui.GetFontTexUvWhitePixel())
 
 # TODO: Can we implement function overloading? Prefer these are all named 'get_color_u32' with different signatures
 # https://www.python.org/dev/peps/pep-0443/
@@ -6529,6 +6919,17 @@ cpdef pop_text_wrap_pos():
 
 pop_text_wrap_position = pop_text_wrap_pos
 
+cpdef push_allow_keyboard_focus(bool allow_focus):
+    cimgui.PushAllowKeyboardFocus(allow_focus)
+
+cpdef pop_allow_keyboard_focus():
+    cimgui.PopAllowKeyboardFocus()
+
+cpdef push_button_repeat(bool repeat):
+    cimgui.PushButtonRepeat(repeat)
+
+cpdef pop_button_repeat():
+    cimgui.PopButtonRepeat()
 
 cpdef pop_style_color(unsigned int count=1):
     """Pop style color from stack.
@@ -7076,6 +7477,14 @@ def get_cursor_pos():
     return _cast_ImVec2_tuple(cimgui.GetCursorPos())
 
 
+def get_cursor_pos_x():
+    return cimgui.GetCursorPosX()
+
+
+def get_cursor_pos_y():
+    return cimgui.GetCursorPosY()
+
+
 def set_cursor_pos(local_pos):
     """Set the cursor position in local coordinates [0..<window size>] (useful to work with ImDrawList API)
 
@@ -7083,6 +7492,14 @@ def set_cursor_pos(local_pos):
         ImVec2 SetCursorScreenPos(const ImVec2& screen_pos)
     """
     cimgui.SetCursorPos(_cast_tuple_ImVec2(local_pos))
+
+
+def set_cursor_pos_x(float x):
+    cimgui.SetCursorPosX(x)
+
+
+def set_cursor_pos_y(float y):
+    cimgui.SetCursorPosY(y)
 
 
 def get_cursor_start_pos():
@@ -7118,6 +7535,8 @@ get_cursor_start_position = get_cursor_start_pos
 get_cursor_screen_position = get_cursor_screen_pos
 set_cursor_screen_position = set_cursor_screen_pos
 
+def align_text_to_frame_padding():
+    cimgui.AlignTextToFramePadding()
 
 def get_text_line_height():
     """Get text line height.
@@ -7227,7 +7646,7 @@ def push_id(str str_id):
     """Push an ID into the ID stack
 
     Args:
-        id (str): ID to push
+        str_id (str): ID to push
 
       wraps::
         PushID(const char* str_id)
@@ -7338,6 +7757,24 @@ def _py_istyled(*variables_and_values):
     finally:
         # perf: short wiring despite we have a wrapper for this
         cimgui.PopStyleVar(count)
+
+
+@contextmanager
+def _py_scoped(str str_id):
+    """Use scoped ID within a block of code.
+
+    This context manager can be used to distinguish widgets sharing
+    same implicit identifiers without manual calling of :func:`push_id`
+    :func:`pop_id` functions.
+
+    Example:
+
+    Args:
+        str_id (str): ID to push and pop within marked scope
+    """
+    push_id(str_id)
+    yield
+    pop_id()
 
 
 def _py_vertex_buffer_vertex_pos_offset():

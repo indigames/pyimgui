@@ -2,41 +2,10 @@
 from __future__ import absolute_import
 
 import OpenGL.GL as gl
-
 import imgui
 import ctypes
 
-
-class BaseOpenGLRenderer(object):
-    def __init__(self):
-        if not imgui.get_current_context():
-            raise RuntimeError(
-                "No valid ImGui context. Use imgui.create_context() first and/or "
-                "imgui.set_current_context()."
-            )
-        self.io = imgui.get_io()
-
-        self._font_texture = None
-
-        self.io.delta_time = 1.0 / 60.0
-
-        self._create_device_objects()
-        self.refresh_font_texture()
-
-    def render(self, draw_data):
-        raise NotImplementedError
-
-    def refresh_font_texture(self):
-        raise NotImplementedError
-
-    def _create_device_objects(self):
-        raise NotImplementedError
-
-    def _invalidate_device_objects(self):
-        raise NotImplementedError
-
-    def shutdown(self):
-        self._invalidate_device_objects()
+from .base import BaseOpenGLRenderer
 
 
 class ProgrammablePipelineRenderer(BaseOpenGLRenderer):
@@ -204,12 +173,12 @@ class ProgrammablePipelineRenderer(BaseOpenGLRenderer):
 
         gl.glViewport(0, 0, int(fb_width), int(fb_height))
 
-        ortho_projection = [
-            [ 2.0/display_width, 0.0,                   0.0, 0.0],
-            [ 0.0,               2.0/-display_height,   0.0, 0.0],
-            [ 0.0,               0.0,                  -1.0, 0.0],
-            [-1.0,               1.0,                   0.0, 1.0]
-        ]
+        ortho_projection = (ctypes.c_float * 16)(
+             2.0/display_width, 0.0,                   0.0, 0.0,
+             0.0,               2.0/-display_height,   0.0, 0.0,
+             0.0,               0.0,                  -1.0, 0.0,
+            -1.0,               1.0,                   0.0, 1.0
+        )
 
         gl.glUseProgram(self._shader_handle)
         gl.glUniform1i(self._attrib_location_tex, 0)
